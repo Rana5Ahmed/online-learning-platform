@@ -17,11 +17,14 @@ function registerUser(req, res) {
   // If the registeration is vaild then :
   else{
   const { username, password } = req.body;
-  const isPasswordTaken = users.some(user => user.password === password);
-  if (isPasswordTaken) {
-    // If the password is already taken, return an error response
-    return res.status(400).json({ message: 'Password already in use. Please choose another password.' });
+  const isUsernameTaken = users.some((user) => user.username === username);
+  if (isUsernameTaken) {
+    // If the username is already taken, return an error response
+    return res
+      .status(400)
+      .json({ message: 'Username already in use. Please choose another username.' });
   }
+
   // Create new instance to hold the data of new student
   const newUser = new User(users.length + 1, username, password);
   //Add the newUser to the Users array
