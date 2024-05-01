@@ -1,54 +1,86 @@
 // Importing the Course model
-const Course = require('../models/Course');
+const { courses} = require('../models/Course');
 const Joi = require('joi');
 const { courseCreationSchema } = require('../helpers/vaildation');
 const { users } = require('./userController');
-const courses = [
-  new Course(1, 'JavaScript Fundamentals', 'Learn the basics of JavaScript programming'), 
-  new Course(2, 'Web Development Bootcamp', 'Master the essentials of web development') 
-];
 
-function createCourse(req, res) {
-  // Validation 
-  const { error } = courseCreationSchema.validate(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });}
-  else
-{
-  // Extracting name and description from the request body
-  const { name, description } = req.body;
-  // Creating a new Course instance with an incremented ID
-  const newCourse = new Course(courses.length + 1, name, description);
-  courses.push(newCourse);
-  res.status(201).json({ message: 'Course created successfully' });
-}
-}
 
-function getAllCourses(req, res) {
-  res.status(200).json(courses);
-}
+async function createCourse(req, res) {
+  try {
+    const { error } = courseCreationSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
 
-function enrollCourse(req, res) {
-// Extracting course ID and user ID from request parameters and body (The course ID will be in the request and you put the userId in the body)
-  const courseId = parseInt(req.params.id);
-  const userId = parseInt(req.body.userId);
-  // Make sure that course and student ID are exist 
-  const course = courses.find(course => course.id === courseId);
-  const found_user= users.find(user => user.id === userId);
-  // IF NOT --> Error
-  if (!course) {
-    return res.status(404).json({ message: 'Course not found' });
-  }   
-  else if (!found_user) {
-    return res.status(404).json({ message: 'User not found' });
+    const { id,name, description} = req.body;
+    const existingid = await courses.findOne({ id });
+    if (existingid) {
+      return res.status(400).json({ message: 'Course is already exist,Enroll now to it !!' });
+    }
+    const existingCourse = await courses.findOne({ name });
+    if (existingCourse) {
+      return res.status(400).json({ message: 'Course is already exist,Enroll now to it !!' });
+    }
+   const newCourse = await courses.create({ id, name, description });
+    res.status(201).json({ message: 'Course created successfully', courses: newCourse });
+  } catch (error) {
+    res.status(500).json({ message: 'Error creating course', error: error.message });
   }
+}
+
+
+async function deleteCourse  (req, res) {
+  try {
+      const course = await courses.deleteOne({ _id: req.body.course_id });
+      res.status(200).json({message: 'Course Deleted successfully',course});
+  } catch (error) {
+      res.status(400).send(error);
+  }
+}
+
+
+
+async function enrollCourse(req, res) {
+  try {
+    const courseId_id = req.params.id;
+    const user_id = req.body.user_Id;
+    const course = await courses.findById(courseId_id);
+    const user = await users.findById(user_id);
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Assuming you have a method like `enrollStudent` in your Course model
+  
+    const checking = course.students.includes(user_id);
+    if (checking){
+      return res.status(404).json({ message: 'User is already in that course' });
+    }
     else{
-  course.enrollStudent(userId);
-  res.status(200).json({ message: 'User enrolled in course successfully' });
+    course.students.addToSet(user_id)
+    }
+    await course.save();
+    res.status(200).json({ message: 'User enrolled in course successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error enrolling user in course', error: error.message });
+  }
 }
+async function getAllCourses(req, res) {
+  try {
+    const allCourses = await courses.find({});
+    res.status(200).json(allCourses);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching courses', error: error.message });
+  }
 }
+
 module.exports = {
   createCourse,
   enrollCourse,
   getAllCourses,
-};
+  deleteCourse,
+  };
