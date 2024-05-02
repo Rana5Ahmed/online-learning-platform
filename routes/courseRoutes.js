@@ -5,4 +5,5 @@ const router = express.Router();
 router.post('/', courseController.createCourse);
 router.post('/:id/enroll', courseController.enrollCourse);
 router.get('/', courseController.getAllCourses);
+router.delete('/', courseController.deleteCourse);
 module.exports = router;
